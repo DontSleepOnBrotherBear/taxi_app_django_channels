@@ -46,3 +46,13 @@ class TripSerializer(serializers.ModelSerializer):
         model = Trip
         fields = '__all__'
         read_only_fields = ('id', 'created', 'updated',) # "so we can ensure that they will never be created or updated via the serializer" ??
+
+
+class NestedTripSerializer(serializers.ModelSerializer):
+    driver = UserSerializer()
+    rider = UserSerializer()
+
+    class Meta:
+        model = Trip
+        fields = '__all__'
+        depth = 1
