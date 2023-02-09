@@ -5,7 +5,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.db.models import Q
 
 
-from .serializers import UserSerializer, LogInSerializer, TripSerializer
+from .serializers import UserSerializer, LogInSerializer, NestedTripSerializer
 from .models import Trip
 
 class SignUpView(generics.CreateAPIView):
@@ -19,8 +19,7 @@ class TripView(viewsets.ReadOnlyModelViewSet):
     lookup_field = 'id' 
     lookup_url_kwarg = 'trip_id'
     permission_classes = (permissions.IsAuthenticated,)
-    queryset = Trip.objects.all()
-    serializer_class = TripSerializer
+    serializer_class = NestedTripSerializer #we use the nested serializer instead of the trip serializer because we want the Trip API response payload to include full driver and rider object representations.
 
     def get_queryset(self): 
         user = self.request.user

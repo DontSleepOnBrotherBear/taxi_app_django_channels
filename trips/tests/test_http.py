@@ -3,6 +3,9 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 from django.contrib.auth.models import Group
+from io import BytesIO
+from django.core.files.uploadedfile import SimpleUploadedFile
+from PIL import Image
 
 import base64 
 import json 
@@ -10,6 +13,19 @@ import json
 from trips.models import Trip
 
 PASSWORD = 'pAssw0rd'
+
+#                           helper functions:
+# create_user(username='user@example.com', password=PASSWORD, group_name='rider'):
+# create_photo_file():
+
+#                           tests:
+#test_user_can_sign_up(self):
+#test_user_can_log_in(self):
+#test_user_can_list_trips(self):
+#test_user_can_retrieve_trip_by_id(self): 
+
+
+
 
 #helper function to help keep our code DRY:
 def create_user(username='user@example.com', password=PASSWORD, group_name='rider'):
@@ -20,11 +36,19 @@ def create_user(username='user@example.com', password=PASSWORD, group_name='ride
     user.save()
     return user
 
+#helper functions
+def create_photo_file():
+    data = BytesIO()
+    Image.new('RGB', (100, 100)).save(data, 'PNG')
+    data.seek(0)
+    return SimpleUploadedFile('photo.png', data.getvalue()) #creates fake image data for testing purposes
+
 
 
 class AuthenticationTest(APITestCase):
 
     def test_user_can_sign_up(self):
+        photo_file = create_photo_file()
         response = self.client.post(reverse('sign_up'), data={
             'username': 'user@example.com',
             'first_name': 'Test',
@@ -32,6 +56,8 @@ class AuthenticationTest(APITestCase):
             'password1': PASSWORD,
             'password2': PASSWORD,
             'group': 'rider',
+            'photo': photo_file,
+
         })
         user = get_user_model().objects.last()
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
@@ -40,9 +66,10 @@ class AuthenticationTest(APITestCase):
         self.assertEqual(response.data['first_name'], user.first_name)
         self.assertEqual(response.data['last_name'], user.last_name)
         self.assertEqual(response.data['group'], user.group)
+        self.assertIsNotNone(user.photo)
 
 
-    def test_user_can_log_in(self): # new
+    def test_user_can_log_in(self): 
         user = create_user()
         response = self.client.post(reverse('log_in'), data={
             'username': user.username,
@@ -66,10 +93,10 @@ class AuthenticationTest(APITestCase):
 
 class HttpTripTest(APITestCase):
     def setUp(self):
-        self.user = create_user() # changed
-        self.client.login(username=self.user.username, password=PASSWORD)  # changed
+        self.user = create_user() 
+        self.client.login(username=self.user.username, password=PASSWORD) 
 
-    def test_user_can_list_trips(self): # changed
+    def test_user_can_list_trips(self):
         trips = [
             Trip.objects.create(
                 pick_up_address='A', drop_off_address='B', rider=self.user),
@@ -84,7 +111,7 @@ class HttpTripTest(APITestCase):
         act_trip_ids = [trip.get('id') for trip in response.data]
         self.assertCountEqual(act_trip_ids, exp_trip_ids)
 
-    def test_user_can_retrieve_trip_by_id(self): # changed
+    def test_user_can_retrieve_trip_by_id(self): 
         trip = Trip.objects.create(
             pick_up_address='A', drop_off_address='B', rider=self.user)
         response = self.client.get(trip.get_absolute_url())

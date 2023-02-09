@@ -129,7 +129,7 @@ class TestWebSocket:
         )
         communicator = WebsocketCommunicator(
             application=application,
-            path=f'/taxi/?token={access}'
+            path=f'/taxi/?token={access}' # Because we pass in the access token, the communicator is linked to the test user with the 'driver' group attribute
         )
         await communicator.connect()
         message = {
@@ -137,8 +137,8 @@ class TestWebSocket:
             'data': 'This is a test message.',
         }
         channel_layer = get_channel_layer()
-        await channel_layer.group_send('drivers', message=message)
-        response = await communicator.receive_json_from()
+        await channel_layer.group_send('drivers', message=message) # sends the message to the driver group on the layer
+        response = await communicator.receive_json_from() # receive the message that was sent to the group layer, thus showing that the user is in the driver pool
         assert response == message
         await communicator.disconnect()
 

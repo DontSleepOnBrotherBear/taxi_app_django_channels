@@ -1,0 +1,7 @@
+this is how media files get stored
+
+the path is:
+
+http://127.0.0.1:8000/media/test.txt
+
+Because media url was stored as /media/

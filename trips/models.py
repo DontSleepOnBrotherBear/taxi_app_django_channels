@@ -6,6 +6,8 @@ from django.shortcuts import reverse
 from django.conf import settings
 
 class User(AbstractUser):
+    photo = models.ImageField(upload_to='photos', null=True, blank=True)
+
     @property           #What the @property decorator does, is declare that group can be accessed like it's a variable. So like my_group = user.group instead of group()
     def group(self):
         groups = self.groups.all()
