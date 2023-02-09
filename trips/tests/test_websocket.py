@@ -9,6 +9,26 @@ from trips.models import Trip
 
 from taxi.asgi import application
 
+
+
+#                   helper functions:
+# create_user
+# create_trip
+
+#                   tests: 
+# test_can_connect_to_server(self, settings)
+# test_can_send_and_receive_messages(self, settings)
+# test_cannot_connect_to_socket(self, settings)
+# test_join_driver_pool(self, settings)
+# test_request_trip(self, settings)
+# test_driver_alerted_on_request(self, settings)
+# test_create_trip_group(self, settings)
+# test_join_trip_group_on_connect(self, settings)
+# test_driver_can_update_trip(self, settings)
+# test_driver_join_trip_group_on_connect(self, settings)
+
+
+
 TEST_CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
@@ -240,6 +260,81 @@ class TestWebSocket:
             'test.user@example.com', 'pAssw0rd', 'rider'
         )
         trip = await create_trip(rider=user)
+        communicator = WebsocketCommunicator(
+            application=application,
+            path=f'/taxi/?token={access}'
+        )
+        await communicator.connect()
+
+        # Send a message to the trip group.
+        message = {
+            'type': 'echo.message',
+            'data': 'This is a test message.',
+        }
+        channel_layer = get_channel_layer()
+        await channel_layer.group_send(f'{trip.id}', message=message)
+
+        # Rider receives message.
+        response = await communicator.receive_json_from()
+        assert response == message
+
+        await communicator.disconnect()
+
+
+    async def test_driver_can_update_trip(self, settings):
+        settings.CHANNEL_LAYERS = TEST_CHANNEL_LAYERS
+
+        # Create trip request.                                 
+        rider, _ = await create_user(
+            'test.rider@example.com', 'pAssw0rd', 'rider'
+        )
+        trip = await create_trip(rider=rider)
+        trip_id = f'{trip.id}'
+
+        # Listen for messages as rider.
+        channel_layer = get_channel_layer()
+        await channel_layer.group_add(
+            group=trip_id,
+            channel='test_channel'
+        )
+
+        # Update trip.
+        driver, access = await create_user(
+            'test.driver@example.com', 'pAssw0rd', 'driver'
+        )
+        communicator = WebsocketCommunicator(
+            application=application,
+            path=f'/taxi/?token={access}'
+        )
+        await communicator.connect()
+        message = {
+            'type': 'update.trip',
+            'data': {
+                'id': trip_id,
+                'pick_up_address': trip.pick_up_address,
+                'drop_off_address': trip.drop_off_address,
+                'status': Trip.IN_PROGRESS,
+                'driver': driver.id,
+            },
+        }
+        await communicator.send_json_to(message)
+
+        # Rider receives message.
+        response = await channel_layer.receive('test_channel')
+        response_data = response.get('data')
+        assert response_data['id'] == trip_id
+        assert response_data['rider']['username'] == rider.username
+        assert response_data['driver']['username'] == driver.username
+
+        await communicator.disconnect()
+
+
+    async def test_driver_join_trip_group_on_connect(self, settings):
+        settings.CHANNEL_LAYERS = TEST_CHANNEL_LAYERS
+        user, access = await create_user(
+            'test.user@example.com', 'pAssw0rd', 'driver'
+        )
+        trip = await create_trip(driver=user)
         communicator = WebsocketCommunicator(
             application=application,
             path=f'/taxi/?token={access}'

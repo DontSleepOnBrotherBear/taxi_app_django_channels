@@ -6,7 +6,10 @@ from django.shortcuts import reverse
 from django.conf import settings
 
 class User(AbstractUser):
-    pass
+    @property           #What the @property decorator does, is declare that group can be accessed like it's a variable. So like my_group = user.group instead of group()
+    def group(self):
+        groups = self.groups.all()
+        return groups[0].name if groups else None
 
 
 class Trip(models.Model): # new

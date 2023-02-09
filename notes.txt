@@ -1,0 +1,19 @@
+Why sometimes is it:
+    # Rider receives message.
+    response = await communicator.receive_json_from()
+    assert response == message
+
+and other times it's: 
+
+    # Rider receives message.
+    response = await channel_layer.receive('test_channel')
+    response_data = response.get('data')
+    assert response_data['id'] == trip_id
+
+
+In the first example, the communicator, aka the WebsocketCommunicator class function receive_json_from() method is used to collect
+a message that was sent to the channel.
+
+In the second example, the channel_layer object itself is ised to collect the message. 
+
+What's the difference?
